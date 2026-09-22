@@ -1,15 +1,25 @@
-*.iml
-.gradle
-/local.properties
-/.idea/caches
-/.idea/libraries
-/.idea/modules.xml
-/.idea/workspace.xml
-/.idea/navEditor.xml
-/.idea/assetWizardSettings.xml
-.DS_Store
+# 1. 构建输出与缓存 (Build & Cache)
+.gradle/
+build/
 /build
+captures/
 /captures
-.externalNativeBuild
-.cxx
+
+# 2. 本地与环境私有配置 (Local Configurations)
 local.properties
+/local.properties
+
+# 3. IDE / Android Studio 配置文件 (IDE Files)
+# 排除所有 iml 模块文件
+*.iml
+
+# 彻底忽略整个 .idea 目录（涵盖 caches、libraries、workspace 等所有子文件）
+.idea/
+
+# 4. C/C++ 原生编译缓存 (Native Build)
+.externalNativeBuild/
+.cxx/
+
+# 5. 系统生成垃圾文件 (OS generated)
+.DS_Store
+Thumbs.db
