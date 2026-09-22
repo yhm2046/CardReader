@@ -1,25 +1,19 @@
 package com.example.cardreader
 
-import android.app.Activity
 import android.nfc.NfcAdapter
 import android.nfc.Tag
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 class MainActivity : ComponentActivity(), NfcAdapter.ReaderCallback {
 
@@ -47,9 +41,11 @@ class MainActivity : ComponentActivity(), NfcAdapter.ReaderCallback {
 
     override fun onResume() {
         super.onResume()
-        // 注册前台 ReaderMode，仅监听 NFC-A / ISO 14443-3A 卡片
+        // 关键：同时监听 NFC-A (中国交通联合) 与 NFC-F (日本 FeliCa)
         val flags = NfcAdapter.FLAG_READER_NFC_A or
+                NfcAdapter.FLAG_READER_NFC_F or
                 NfcAdapter.FLAG_READER_SKIP_NDEF_CHECK
+
         nfcAdapter?.enableReaderMode(this, this, flags, null)
     }
 
@@ -58,15 +54,14 @@ class MainActivity : ComponentActivity(), NfcAdapter.ReaderCallback {
         nfcAdapter?.disableReaderMode(this)
     }
 
-    // 后台 NFC 线程回调
     override fun onTagDiscovered(tag: Tag?) {
         tag ?: return
         uiState.value = CardUiState.Reading
 
-        val result = CardReader.readBalance(tag)
+        val result = CardReader.readCard(tag)
         result.fold(
-            onSuccess = { balance ->
-                uiState.value = CardUiState.Success(balance)
+            onSuccess = { cardInfo ->
+                uiState.value = CardUiState.Success(cardInfo)
             },
             onFailure = { error ->
                 uiState.value = CardUiState.Error(error.localizedMessage ?: "未知错误")
@@ -78,7 +73,7 @@ class MainActivity : ComponentActivity(), NfcAdapter.ReaderCallback {
 sealed interface CardUiState {
     data object Waiting : CardUiState
     data object Reading : CardUiState
-    data class Success(val balance: String) : CardUiState
+    data class Success(val cardInfo: CardInfo) : CardUiState
     data class Error(val message: String) : CardUiState
 }
 
@@ -97,23 +92,23 @@ fun CardReaderScreen(nfcEnabled: Boolean, uiState: CardUiState) {
             modifier = Modifier.padding(top = 48.dp)
         ) {
             Text(
-                text = "深圳通 / 八达通",
+                text = "中日交通卡查询",
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = if (nfcEnabled) "请将卡片贴在手机背面 NFC 感应区" else "检测到 NFC 未开启，请前往系统设置打开",
+                text = if (nfcEnabled) "支持 深圳通/全国一卡通、Suica、PASMO 等" else "请先在系统设置中开启 NFC",
                 style = MaterialTheme.typography.bodyMedium,
                 color = if (nfcEnabled) MaterialTheme.colorScheme.outline else MaterialTheme.colorScheme.error
             )
         }
 
-        // 核心显示区域（卡片样式）
+        // 核心显示区域
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(210.dp),
+                .height(230.dp),
             shape = RoundedCornerShape(20.dp),
             elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
             colors = CardDefaults.cardColors(
@@ -129,7 +124,7 @@ fun CardReaderScreen(nfcEnabled: Boolean, uiState: CardUiState) {
                 when (uiState) {
                     is CardUiState.Waiting -> {
                         Text(
-                            text = "等待刷卡...",
+                            text = "请将卡片贴在手机背面",
                             style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -139,23 +134,29 @@ fun CardReaderScreen(nfcEnabled: Boolean, uiState: CardUiState) {
                     }
                     is CardUiState.Success -> {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            // 动态显示识别出的卡种
+                            SuggestionChip(
+                                onClick = {},
+                                label = { Text(uiState.cardInfo.type.label) }
+                            )
+                            Spacer(modifier = Modifier.height(12.dp))
                             Text(
                                 text = "卡内余额",
-                                style = MaterialTheme.typography.labelLarge,
+                                style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.outline
                             )
-                            Spacer(modifier = Modifier.height(8.dp))
+                            Spacer(modifier = Modifier.height(4.dp))
                             Row(verticalAlignment = Alignment.Bottom) {
                                 Text(
-                                    text = "¥",
-                                    fontSize = 24.sp,
+                                    text = uiState.cardInfo.type.currencySymbol,
+                                    fontSize = 26.sp,
                                     fontWeight = FontWeight.Bold,
                                     modifier = Modifier.padding(bottom = 6.dp)
                                 )
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Text(
-                                    text = uiState.balance,
-                                    fontSize = 48.sp,
+                                    text = uiState.cardInfo.balance,
+                                    fontSize = 46.sp,
                                     fontWeight = FontWeight.ExtraBold,
                                     color = MaterialTheme.colorScheme.primary
                                 )
@@ -175,7 +176,7 @@ fun CardReaderScreen(nfcEnabled: Boolean, uiState: CardUiState) {
 
         // 底部提示
         Text(
-            text = "手机芯片感应区位于后置摄像头模组附近",
+            text = "NFC 位于后置摄像头横条正下方区域",
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.outline,
             modifier = Modifier.padding(bottom = 24.dp)
