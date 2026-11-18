@@ -108,7 +108,7 @@ fun CardReaderScreen(nfcEnabled: Boolean, uiState: CardUiState) {
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(230.dp),
+                .heightIn(min = 230.dp),
             shape = RoundedCornerShape(20.dp),
             elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
             colors = CardDefaults.cardColors(
@@ -117,7 +117,7 @@ fun CardReaderScreen(nfcEnabled: Boolean, uiState: CardUiState) {
         ) {
             Box(
                 modifier = Modifier
-                    .fillMaxSize()
+                    .fillMaxWidth()
                     .padding(24.dp),
                 contentAlignment = Alignment.Center
             ) {
@@ -134,32 +134,44 @@ fun CardReaderScreen(nfcEnabled: Boolean, uiState: CardUiState) {
                     }
                     is CardUiState.Success -> {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            // 动态显示识别出的卡种
+                            // 卡种
                             SuggestionChip(
                                 onClick = {},
-                                label = { Text(uiState.cardInfo.type.label) }
+                                label = { Text(uiState.cardInfo.title) }
                             )
                             Spacer(modifier = Modifier.height(12.dp))
-                            Text(
-                                text = "卡内余额",
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.outline
-                            )
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Row(verticalAlignment = Alignment.Bottom) {
+                            // 每个账户一行
+                            uiState.cardInfo.balances.forEach { b ->
                                 Text(
-                                    text = uiState.cardInfo.type.currencySymbol,
-                                    fontSize = 26.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    modifier = Modifier.padding(bottom = 6.dp)
+                                    text = b.label,
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.outline
                                 )
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(
-                                    text = uiState.cardInfo.balance,
-                                    fontSize = 46.sp,
-                                    fontWeight = FontWeight.ExtraBold,
-                                    color = MaterialTheme.colorScheme.primary
-                                )
+                                Spacer(modifier = Modifier.height(2.dp))
+                                if (b.amount != null) {
+                                    Row(verticalAlignment = Alignment.Bottom) {
+                                        Text(
+                                            text = b.symbol,
+                                            fontSize = 22.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            modifier = Modifier.padding(bottom = 4.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text(
+                                            text = b.amount,
+                                            fontSize = 38.sp,
+                                            fontWeight = FontWeight.ExtraBold,
+                                            color = MaterialTheme.colorScheme.primary
+                                        )
+                                    }
+                                } else {
+                                    Text(
+                                        text = b.note ?: "读取失败",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.error
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(10.dp))
                             }
                         }
                     }
