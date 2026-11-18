@@ -98,7 +98,7 @@ fun CardReaderScreen(nfcEnabled: Boolean, uiState: CardUiState) {
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = if (nfcEnabled) "支持 深圳通/全国一卡通、Suica、PASMO 等" else "请先在系统设置中开启 NFC",
+                text = if (nfcEnabled) "支持 深圳通/全国一卡通、八达通、Suica、PASMO 等" else "请先在系统设置中开启 NFC",
                 style = MaterialTheme.typography.bodyMedium,
                 color = if (nfcEnabled) MaterialTheme.colorScheme.outline else MaterialTheme.colorScheme.error
             )
